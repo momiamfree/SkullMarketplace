@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 async function main() {
   const [owner] = await ethers.getSigners();
 
-  const NFT_ADDRESS = "0x9dB4D0D8B013697114cbcd25875231671fEEc6eb";
+  const NFT_ADDRESS = "0xA691b0E7Ab049a257B5B0357788ad205e972e13d";
   const MARKETPLACE_ADDRESS = "0xb1A4e26148399Fe8AD3C67a6F4644Aa5186F2BD0";
 
   const provider = ethers.provider; // provider de Sepolia según hardhat.config.ts
