@@ -1,164 +1,127 @@
 import { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import Marketplace from "./components/marketplace/Marketplace";
+import Product from "./components/product/Product";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount, useWalletClient } from "wagmi";
-import { ethers } from "ethers";
-import { useNftList } from "./NftList.tsx";
-
-import NFT_ABI from "./abis/SkullNFT.json";
-import MARKETPLACE_ABI from "./abis/SkullMarketplace.json";
-
-const NFT_ADDRESS = "0xA691b0E7Ab049a257B5B0357788ad205e972e13d";
-const MARKETPLACE_ADDRESS = "0xb1A4e26148399Fe8AD3C67a6F4644Aa5186F2BD0";
 
 export default function App() {
-  const [status, setStatus] = useState("");
-  const [tokenId, setTokenId] = useState<number | null>(null);
-
-  const { isConnected, address } = useAccount();
-  const { data: walletClient } = useWalletClient();
-  const { tokenIds, loading } = useNftList();
-
-  const getSigner = async () => {
-    if (!walletClient) return null;
-    const provider = new ethers.BrowserProvider(walletClient);
-    return provider.getSigner();
-  };
-
-  const mintNFT = async () => {
-    if (!address) return;
-    setStatus("Minting...");
-
-    const signer = await getSigner();
-    if (!signer) return;
-
-    const nft = new ethers.Contract(NFT_ADDRESS, NFT_ABI.abi, signer);
-    const tx = await nft.mint(address);
-    const receipt = await tx.wait();
-
-    const event = receipt.logs?.[0];
-    if (event) {
-      setTokenId(Number(BigInt(event.topics[3])));
-    }
-
-    setStatus("NFT minted ✅");
-  };
-
-  const approveMarketplace = async () => {
-    setStatus("Approving...");
-
-    const signer = await getSigner();
-    if (!signer) return;
-
-    const nft = new ethers.Contract(NFT_ADDRESS, NFT_ABI.abi, signer);
-    await nft.setApprovalForAll(MARKETPLACE_ADDRESS, true);
-
-    setStatus("Marketplace approved ✅");
-  };
-
-  const listNFT = async () => {
-    if (tokenId === null) return;
-    setStatus("Listing NFT...");
-
-    const signer = await getSigner();
-    if (!signer) return;
-
-    const marketplace = new ethers.Contract(
-      MARKETPLACE_ADDRESS,
-      MARKETPLACE_ABI.abi,
-      signer
-    );
-
-    const price = ethers.parseEther("0.01");
-    await marketplace.listNFT(NFT_ADDRESS, tokenId, price);
-
-    setStatus("NFT listed ✅");
-  };
-
-  const buyNFT = async () => {
-    if (tokenId === null) return;
-    setStatus("Buying NFT...");
-
-    const signer = await getSigner();
-    if (!signer) return;
-
-    const marketplace = new ethers.Contract(
-      MARKETPLACE_ADDRESS,
-      MARKETPLACE_ABI.abi,
-      signer
-    );
-
-    const price = ethers.parseEther("0.001");
-    await marketplace.buyNFT(NFT_ADDRESS, tokenId, { value: price });
-
-    setStatus("NFT bought 🎉");
-  };
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="p-8 space-y-12 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold text-center">
-        SkullMarketplace Test UI
-      </h1>
+    <Router>
+      <nav className="relative p-6 flex items-center border-b border-yellow-200">
 
-      <div className="flex justify-center">
-        <ConnectButton />
-      </div>
+        {/* ---------- LEFT ---------- */}
+        <div className="flex items-center gap-3">
+          <img
+            src="/SKULLKID.png"
+            alt="Logo"
+            className="w-12 h-12 md:w-15 md:h-15 rounded-full border border-yellow-200"
+          />
 
-      {isConnected && (
-        <div className="flex flex-col items-center space-y-4">
-          <button
-            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded"
-            onClick={mintNFT}
-          >
-            Mint NFT
-          </button>
+          <span className="font-bold text-lg md:text-xl">
+            SkullMarketplace
+          </span>
 
-          <button
-            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded"
-            onClick={approveMarketplace}
-          >
-            Approve Marketplace
-          </button>
-
-          <button
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded"
-            onClick={listNFT}
-            disabled={tokenId === null}
-          >
-            List NFT
-          </button>
-
-          <button
-            className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded"
-            onClick={buyNFT}
-            disabled={tokenId === null}
-          >
-            Buy NFT
-          </button>
-
-          {status && <p className="font-semibold">{status}</p>}
         </div>
-      )}
 
-      <hr />
+        {/* ---------- CENTER LINKS (desktop only) ---------- */}
+        <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex gap-12">
+          <Link to="/" className="font-bold text-lg">
+            Collections
+          </Link>
+          <Link to="/mynfts" className="font-bold text-lg">
+            My NFTs
+          </Link>
+        </div>
 
-      <h2 className="text-2xl font-bold text-center">My Skull NFTs 💀</h2>
+        {/* ---------- RIGHT (desktop wallet) ---------- */}
+        <div className="ml-auto hidden md:block">
+          <CustomConnectButton />
+        </div>
 
-      {loading && <p className="text-center">Loading NFTs...</p>}
+        {/* ---------- MOBILE MENU BUTTON ---------- */}
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="ml-auto md:hidden text-2xl border border-yellow-200 rounded-full px-4 py-1 pb-2"
+        >
+          ☰
+        </button>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {tokenIds.map((id) => (
-          <div
-            key={id.toString()}
-            className="border rounded-lg p-4 text-center shadow"
-          >
-            <p className="font-semibold">Token #{id.toString()}</p>
+        {/* ---------- MOBILE DROPDOWN ---------- */}
+        {menuOpen && (
+          <div className="absolute top-full right-4 mt-2 w-56 bg-brown border border-yellow-200 rounded-xl shadow-lg p-4 z-50 flex flex-col gap-3">
+
+            <Link
+              to="/"
+              onClick={() => setMenuOpen(false)}
+              className="font-semibold text-center"
+            >
+              Collections
+            </Link>
+
+            <Link
+              to="/mynfts"
+              onClick={() => setMenuOpen(false)}
+              className="font-semibold text-center"
+            >
+              My NFTs
+            </Link>
+
+            <div className="border-t pt-3">
+              <CustomConnectButton />
+            </div>
           </div>
-        ))}
-      </div>
+        )}
+      </nav>
 
-      {!loading && tokenIds.length === 0 && (
-        <p className="text-center text-gray-500">No NFTs found</p>
-      )}
-    </div>
+      <Routes>
+        <Route path="/" element={<Product />} />
+        <Route path="/mynfts" element={<Marketplace />} />
+        <Route path="/products" element={<Product />} />
+      </Routes>
+    </Router>
+  );
+}
+
+/* ---------- WALLET BUTTON ---------- */
+
+export function CustomConnectButton() {
+  return (
+    <ConnectButton.Custom>
+      {({
+        account,
+        chain,
+        openAccountModal,
+        openConnectModal,
+        mounted,
+      }) => {
+        if (!mounted) return null;
+
+        const connected = account && chain;
+
+        return (
+          <>
+            {!connected && (
+              <button
+                onClick={openConnectModal}
+                className="wallet-button w-full px-4 py-2 rounded-full bg-yellow-200 text-brown font-semibold transition cursor-pointer"
+              >
+                Connect Wallet
+              </button>
+            )}
+
+            {connected && (
+              <button
+                onClick={openAccountModal}
+                className="wallet-button w-full px-4 py-2 rounded-full border border-yellow-200 text-yellow-200 hover:bg-yellow-200 transition cursor-pointer"
+              >
+                {account.displayName}
+              </button>
+            )}
+          </>
+        );
+      }}
+    </ConnectButton.Custom>
   );
 }
