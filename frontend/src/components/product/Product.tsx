@@ -1,161 +1,132 @@
 import { useState } from "react";
-import { useAccount, useWalletClient } from "wagmi";
-import productsData from "../../data/ProductsData";
-import './Product.css';
+import { useAccount, useWalletClient, useConnect } from "wagmi";
+import { injected } from "wagmi/connectors";
 import { ethers } from "ethers";
-import NFT_ABI from "../../abis/SkullNFT.json";
-import MARKETPLACE_ABI from "../../abis/SkullMarketplace.json";
+import FACTORY_ABI from "../../abis/SkullNFTFactory.json";
+import { COLLECTIONS_UI } from "../../constants/collections.ui";
+import "./Product.css";
+import { ONCHAIN_FACTORY } from "../../constants/collections.onchain";
 
-/* ---------- Types ---------- */
-interface ProductItem {
-    id: number;
-    name: string;
-    image: string;
-    collectionId: number;
-}
-
-interface Collection {
-    id: number;
-    name: string;
-}
-
-interface CollectionFilterProps {
-    collections: Collection[];
-    selectedCollection: number | null;
-    onSelect: (collectionId?: number) => void;
-}
-
-/* ---------- Components ---------- */
-function CollectionFilter({
-    collections,
-    selectedCollection,
-    onSelect,
-}: CollectionFilterProps) {
-return (
-  <div className="w-full text-center mb-6">
-    <button
-      className={`rounded-full px-2 py-1 text-sm border border-yellow-200 mr-2 mb-2 cursor-pointer
-        ${
-          selectedCollection === null
-            ? "bg-yellow-200 text-brown"
-            : "text-yellow-200"
-        }`}
-      onClick={() => onSelect()}
-    >
-      All
-    </button>
-
-    {collections.map((collection) => {
-      const isSelected = selectedCollection === collection.id;
-
-      return (
-        <button
-          key={collection.id}
-          className={`rounded-full px-2 py-1 text-sm border border-yellow-200 mr-2 mb-2 focus:text-brown focus:bg-yellow-200 cursor-pointer
-            ${
-              isSelected
-                ? "bg-yellow-200 text-brown"
-                : "text-yellow-200"
-            }`}
-          onClick={() => onSelect(collection.id)}
-        >
-          {collection.name}
-        </button>
-      );
-    })}
-  </div>
-);
-
-}
+type ModalStatus = "pending" | "success" | "error";
 
 export default function Product() {
-const NFT_ADDRESS = "0xA691b0E7Ab049a257B5B0357788ad205e972e13d";
-const MARKETPLACE_ADDRESS = "0xb1A4e26148399Fe8AD3C67a6F4644Aa5186F2BD0";
-const [status, setStatus] = useState("");
-const [tokenId, setTokenId] = useState<number | null>(null);
+    const { isConnected } = useAccount();
+    const { data: walletClient } = useWalletClient();
+    const { connect } = useConnect();
 
-const { isConnected, address } = useAccount();
-const { data: walletClient } = useWalletClient();
+    const [showModal, setShowModal] = useState(false);
+    const [modalStatus, setModalStatus] = useState<ModalStatus>("pending");
+    const [modalMessage, setModalMessage] = useState("");
 
-const getSigner = async () => {
-    if (!walletClient) return null;
-    const provider = new ethers.BrowserProvider(walletClient);
-    return provider.getSigner();
-};
-const mintNFT = async () => {
-    if (!address) return;
-    setStatus("Minting...");
+    const mintNFT = async (collectionType: number) => {
+        if (!walletClient || !isConnected) return;
 
-    const signer = await getSigner();
-    if (!signer) return;
+        try {
+            setShowModal(true);
+            setModalStatus("pending");
+            setModalMessage("Minting your Skull NFT…");
 
-    const nft = new ethers.Contract(NFT_ADDRESS, NFT_ABI.abi, signer);
-    const tx = await nft.mint(address);
-    const receipt = await tx.wait();
+            const provider = new ethers.BrowserProvider(walletClient);
+            const signer = await provider.getSigner();
 
-    const event = receipt.logs?.[0];
-    if (event) {
-        setTokenId(Number(BigInt(event.topics[3])));
-    }
+            const factory = new ethers.Contract(
+                ONCHAIN_FACTORY,
+                FACTORY_ABI.abi,
+                signer
+            );
 
-    setStatus("NFT minted ✅");
-};
+            const tx = await factory.mint(collectionType, {
+                value: ethers.parseEther("0.0001"),
+            });
 
-    const [selectedCollection, setSelectedCollection] = useState<number | null>(
-        null
-    );
+            await tx.wait();
 
-    const handleSelectCollection = (collectionId?: number) => {
-        if (selectedCollection === collectionId) {
-            setSelectedCollection(null);
-        } else {
-            setSelectedCollection(collectionId ?? null);
+            setModalStatus("success");
+            setModalMessage("🎉 Your Skull NFT was minted successfully! 🎉");
+        } catch (err) {
+            console.error(err);
+            setModalStatus("error");
+            setModalMessage("❌ Mint failed. Please try again.");
         }
     };
 
-    const filteredProducts: ProductItem[] = selectedCollection
-        ? productsData.filter(
-            (product: ProductItem) => product.collectionId === selectedCollection
-        )
-        : productsData;
-
-    const collections: Collection[] = [
-        { id: 1, name: "Bears" },
-        { id: 2, name: "Cats" },
-        { id: 3, name: "Dogs" },
-    ];
-
     return (
-        <div className="p-6 max-w-[1280px] mx-auto">
-            <CollectionFilter
-                collections={collections}
-                selectedCollection={selectedCollection}
-                onSelect={handleSelectCollection}
-            />
+        <div className="p-6 max-w-[1280px] mx-auto pt-10">
+            <h1 className="text-2xl font-bold text-center mb-12 text-yellow-200">
+                Mint your Skull NFT 🌺
+            </h1>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {filteredProducts.map((product) => (
+                {COLLECTIONS_UI.map((col) => (
                     <div
-                        key={product.id}
-                        className="bg-yellow-200 h-110 rounded-lg shadow-md p-4 flex flex-col items-center"
+                        key={col.type}
+                        className="bg-yellow-200 rounded-lg shadow-md p-4 flex flex-col items-center"
                     >
-                        <h4 className="text-lg font-bold mb-2 text-center product-card">
-                            {product.name}
+                        <h4 className="text-lg font-bold mb-2 text-brown">
+                            {col.name}
                         </h4>
+
                         <img
-                            src={product.image}
-                            alt={product.name}
+                            src={col.image}
+                            alt={col.name}
                             className="w-full h-80 object-cover rounded-md mb-4"
                         />
-          <button
-            className="px-6 py-2 text-yellow-200 rounded mint-button cursor-pointer"
-            onClick={mintNFT}
-          >
-            Mint
-          </button>
+
+                        {isConnected ? (
+                            <button
+                                onClick={() => mintNFT(col.type)}
+                                className="px-6 py-2 rounded-full text-brown border border-brown hover:bg-yellow-300 transition mint-button cursor-pointer"
+                            >
+                                Mint · 0.0001 ETH
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => connect({ connector: injected() })}
+                                className="px-6 py-2 rounded-full bg-brown text-yellow-200 hover:opacity-90 transition cursor-pointer"
+                            >
+                                Connect Wallet
+                            </button>
+                        )}
                     </div>
                 ))}
             </div>
+
+            {showModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-yellow-200 rounded-2xl p-8 max-w-sm w-full text-center shadow-xl">
+
+                        {modalStatus === "pending" && (
+                            <div className="flex flex-col items-center">
+                                <p className="text-brown font-semibold mb-6">
+                                    Minting your NFT…
+                                </p>
+                                <button
+                                    onClick={() => setShowModal(false)}
+                                    className="px-6 py-2 rounded-full bg-brown text-yellow-200 hover:opacity-90 transition cursor-pointer"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        )}
+
+                        {modalStatus !== "pending" && (
+                            <>
+                                <p className="text-brown text-lg font-semibold mb-6">
+                                    {modalMessage}
+                                </p>
+
+                                <button
+                                    onClick={() => setShowModal(false)}
+                                    className="px-6 py-2 rounded-full bg-brown text-yellow-200 hover:opacity-90 transition cursor-pointer"
+                                >
+                                    Close
+                                </button>
+                            </>
+                        )}
+
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

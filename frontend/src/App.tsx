@@ -10,22 +10,17 @@ export default function App() {
   return (
     <Router>
       <nav className="relative p-6 flex items-center border-b border-yellow-200">
-
-        {/* ---------- LEFT ---------- */}
         <div className="flex items-center gap-3">
           <img
             src="/SKULLKID.png"
             alt="Logo"
             className="w-12 h-12 md:w-15 md:h-15 rounded-full border border-yellow-200"
           />
-
           <span className="font-bold text-lg md:text-xl">
             SkullMarketplace
           </span>
-
         </div>
 
-        {/* ---------- CENTER LINKS (desktop only) ---------- */}
         <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex gap-12">
           <Link to="/" className="font-bold text-lg">
             Collections
@@ -35,12 +30,10 @@ export default function App() {
           </Link>
         </div>
 
-        {/* ---------- RIGHT (desktop wallet) ---------- */}
         <div className="ml-auto hidden md:block">
           <CustomConnectButton />
         </div>
 
-        {/* ---------- MOBILE MENU BUTTON ---------- */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           className="ml-auto md:hidden text-2xl border border-yellow-200 rounded-full px-4 py-1 pb-2"
@@ -48,7 +41,6 @@ export default function App() {
           ☰
         </button>
 
-        {/* ---------- MOBILE DROPDOWN ---------- */}
         {menuOpen && (
           <div className="absolute top-full right-4 mt-2 w-56 bg-brown border border-yellow-200 rounded-xl shadow-lg p-4 z-50 flex flex-col gap-3">
 
@@ -83,8 +75,6 @@ export default function App() {
     </Router>
   );
 }
-
-/* ---------- WALLET BUTTON ---------- */
 
 export function CustomConnectButton() {
   return (
