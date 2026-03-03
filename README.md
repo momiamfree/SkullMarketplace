@@ -60,7 +60,7 @@ All transactions are executed fully on-chain.
 🚀 Getting Started
 
 1️⃣ Clone the repository
-  - git clone https://github.com/yourusername/skullmarketplace.git
+  - git clone https://github.com/momiamfree/skullmarketplace.git
   - cd frontend
 
 2️⃣ Install dependencies
